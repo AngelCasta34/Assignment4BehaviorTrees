@@ -17,35 +17,44 @@ public class BehaviorBuilder
                     new AnyAllyHealthLowQuery(0.5f),
                     new Heal()
                 }),
-                // Temporary strength buff
-                new Sequence(new BehaviorTree[] {
-                    new AbilityReadyQuery("buff"),
-                    new NearbyEnemiesQuery(1, 5f),
-                    new Buff()
-                }),
                 // Permanent strength buff
                 new Sequence(new BehaviorTree[] {
                     new AbilityReadyQuery("permaBuff"),
                     new NearbyEnemiesQuery(1, 5f),
                     new PermaBuff()
                 }),
+                // Temporary strength buff if player is in range
+                new Sequence(new BehaviorTree[] {
+                    new IsPlayerInRangeQuery(10f),
+                    new AbilityReadyQuery("buff"),
+                    new NearbyEnemiesQuery(1, 5f),
+                    new Buff()
+                }),
                 //  Attack if player in range
                 new Sequence(new BehaviorTree[] {
                     new IsPlayerInRangeQuery(agent.GetAction("attack").range),
-                    new Attack()
-                }),
-                //Move and attack if there are more than 6 enemies in range
-                new Sequence(new BehaviorTree[] {
-                    new CountAlliesQuery(6, 10f),
                     new MoveToPlayer(agent.GetAction("attack").range),
                     new Attack()
                 }),
-                //Group at nearest waypoint if there are less than 9 allies in range
-                //new Sequence(new BehaviorTree[]{
-                //    new GoTo(AIWaypointManager.Instance.GetClosest())
-                //}),
-                // Fallback move to congregation point
-                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 10, agent.GetAction("attack").range)
+                //Move and attack if there are more than 14 enemies in range
+                new Sequence(new BehaviorTree[] {
+                    new CountAlliesQuery(14, 15f),
+                    new MoveToPlayer(agent.GetAction("attack").range),
+                    new Attack()
+                }),
+                //If player gets close and there are 6 or more allies, attack
+                new Sequence(new BehaviorTree[] {
+                    new IsPlayerInRangeQuery(agent.GetAction("attack").range + 3),
+                    new CountAlliesQuery(6, 20f),
+                    new MoveToPlayer(agent.GetAction("attack").range),
+                    new Attack()
+                }),
+                //Stay put if there are 4 or more allies near you
+                new Sequence(new BehaviorTree[]{
+                    new CountAlliesQuery (4, 3f)
+                }),
+                // Fallback move to congregation point, lowest range to keep most protected
+                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 1, 1)
             );
         }
         // front line meat shield
@@ -54,18 +63,29 @@ public class BehaviorBuilder
             result = new Selector(
                 //  Rush & attack if very close
                 new Sequence(new BehaviorTree[] {
+                    new IsPlayerInRangeQuery(agent.GetAction("attack").range + 3),
+                    new MoveToPlayer(agent.GetAction("attack").range),
+                    new Attack()
+                }),
+                //  Attack if 14 or more allies nearby
+                new Sequence(new BehaviorTree[] {
+                    new CountAlliesQuery(14, 15f),
+                    new MoveToPlayer(agent.GetAction("attack").range),
+                    new Attack()
+                }),
+                //If player gets close and there are 6 or more allies, attack
+                new Sequence(new BehaviorTree[] {
+                    new CountAlliesQuery(6, 20f),
                     new IsPlayerInRangeQuery(agent.GetAction("attack").range),
                     new MoveToPlayer(agent.GetAction("attack").range),
                     new Attack()
                 }),
-                //  Attack if 6 or more allies nearby
-                new Sequence(new BehaviorTree[] {
-                    new CountAlliesQuery(6, 10f),
-                    new MoveToPlayer(agent.GetAction("attack").range),
-                    new Attack()
+                //Stay put if there are 4 or more allies near you
+                new Sequence(new BehaviorTree[]{
+                    new CountAlliesQuery (4, 3f)
                 }),
-                //  Congregate
-                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 10, agent.GetAction("attack").range)
+                //  Congregate further out than other units as wall
+                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 1, 4)
             );
         }
         // hit and run striker
@@ -74,22 +94,28 @@ public class BehaviorBuilder
             result = new Selector(
                 //  Attack if player is in range
                 new Sequence(new BehaviorTree[] {
-                    new IsPlayerInRangeQuery(agent.GetAction("attack").range),
+                    new IsPlayerInRangeQuery(agent.GetAction("attack").range + 4),
                     new Attack()
                 }),
-                //  Strike when backed by at least 6 allies
+                //  Strike when backed by at least 14 allies
                 new Sequence(new BehaviorTree[] {
-                    new CountAlliesQuery(6, 10f),
+                    new CountAlliesQuery(14, 15f),
                     new MoveToPlayer(agent.GetAction("attack").range),
                     new Attack()
                 }),
-                //  Retreat if health is low (<40%)
-                /*new Sequence(new BehaviorTree[] {
-                    new IsHealthLowQuery(0.4f),
-                    new GoTo(AIWaypointManager.Instance.GetCongregationPoint(), agent.GetAction("attack").range)
-                }),*/
+                //If player gets close and there are 6 or more allies, attack
+                new Sequence(new BehaviorTree[] {
+                    new IsPlayerInRangeQuery(agent.GetAction("attack").range + 1),
+                    new CountAlliesQuery(6, 20f),
+                    new MoveToPlayer(agent.GetAction("attack").range),
+                    new Attack()
+                }),
+                //Stay put if there are 4 or more allies near you
+                new Sequence(new BehaviorTree[]{
+                    new CountAlliesQuery (4, 3f)
+                }),
                 //  Fallback 
-                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 10, agent.GetAction("attack").range)
+                new GoTowards(AIWaypointManager.Instance.GetCongregationPoint(), 1, 2)
             );
         }
         else
